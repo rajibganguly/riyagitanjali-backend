@@ -23,6 +23,7 @@ const userSchema = new Schema({
         type: Boolean
     },
     phone_number: String,
+    blockflat: String,
     timestamp: { type: String, default: () => new Date().toISOString() }
 });
 

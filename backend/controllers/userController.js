@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const Department = require('../models/department');
 const yup = require('yup');
 const { Timestamp } = require('mongodb');
+const { sendRegistrationEmail } = require('../service/emailService');
 
 
 /***
@@ -13,6 +14,9 @@ const { Timestamp } = require('mongodb');
  * @param: [email, password, name, role_type, phone_number]
  */
 exports.registerUser = async function (req, res, next) {
+    console.log('registerUser==========================', req.body);
+    
+
     try {
         // Define schema for request body validation using Yup
         const schema = yup.object().shape({
@@ -20,15 +24,16 @@ exports.registerUser = async function (req, res, next) {
             password: yup.string().required(),
             name: yup.string().required(),
             role_type: yup.string().required(),
-            payment: yup.boolean(),
-            phone_number: yup.string()
+            phone_number: yup.string(),
+            blockflat: yup.string(),
+            payment: yup.boolean()
         });
 
         // Validate request body against the schema
         await schema.validate(req.body);
         
 
-        const { email, password, name, role_type, phone_number } = req.body;
+        const { email, password, name, role_type, phone_number, blockflat } = req.body;
 
         // Check if the user already exists
         const existingUser = await User.findOne({ email }).exec();
@@ -45,13 +50,16 @@ exports.registerUser = async function (req, res, next) {
             password: hashedPassword,
             name,
             role_type,
-            payment: false,
             phone_number,
+            blockflat,
+            payment: false,
             timestamp: new Date().toISOString()
         });
 
+        console.log('newUser==========================', newUser);
         // Save the new user to the database
-        await newUser.save();
+        await newUser.save();        
+        await sendRegistrationEmail(newUser?.email, newUser?.password, newUser?.phone_number, newUser?.name, newUser?.blockflat);
 
         // Generate a token for the user
         const tokenPayload = {
@@ -107,6 +115,7 @@ exports.loginUser = async function (req, res, next) {
                     name: user.name,
                     role_type: user.role_type
                 };
+                
 
                 const token = jwt.sign(tokenPayload, 'your_secret_key', { expiresIn: '1h' });
                 
